@@ -15,8 +15,18 @@
  ******************************************************************************/
 package ufo.test.spark.service;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
+import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.Map;
 
 import org.apache.spark.api.java.JavaSparkContext;
@@ -27,19 +37,77 @@ import ufo.test.spark.SparkApplicationTests;
 
 public class WordCountServiceTest extends SparkApplicationTests {
 
-    @Autowired
-    private JavaSparkContext sparkContext;
+	public final static String INPUT_FILE_PATH = "./resources/MotorMattMakesGood.txt";
+
+	@Autowired
+	private JavaSparkContext sparkContext;
 
 	@Test
 	public void should_count_words_from_file_on_local_fs() {
-
-		Map<String, Integer> wordsCount = WordCountService.count(sparkContext, "./resources/MotorMattMakesGood.txt", "./target/MotorMattMakesGood_count.txt");
-
+		Map<String, Integer> wordsCount = WordCountService.wordsCountMap(sparkContext, INPUT_FILE_PATH);
 		assertNotNull(wordsCount);
 		assertFalse(wordsCount.isEmpty());
+	}
 
-		System.out.println(wordsCount);
+	@Test
+	public void should_count_words_from_file_on_local_fs_and_save_in_a_file() throws IOException {
+		String outputFilePath = "./target/MotorMattMakesGood_count.txt";
+		Path outputPath = Paths.get(outputFilePath);
+		deleteRecursively(outputPath);
+		WordCountService.wordsCountMapToFile(sparkContext, INPUT_FILE_PATH, outputFilePath);
+		assertTrue(Files.exists(Paths.get(outputFilePath)));
+	}
+
+	@Test
+	public void should_return_10_most_used_words() {
+		int returnWords = 10;
+		Map<String, Integer> wordsCount = WordCountService.getMostUsedWords(sparkContext, INPUT_FILE_PATH, returnWords);
+
+		assertEquals(returnWords, wordsCount.size());
+
+		System.out.println("Printing most used words");
+		wordsCount.forEach((key, value) -> {
+			System.out.println("word [" + key + "] is used " + value + " times");
+		});
+
+		assertTrue(wordsCount.containsKey("the"));
+		assertTrue(wordsCount.containsKey("a"));
 
 	}
 
+	@Test
+	public void should_return_10_longest_words() {
+		int returnWords = 10;
+		Map<String, Integer> wordsCount = WordCountService.getLongestWords(sparkContext, INPUT_FILE_PATH, returnWords);
+
+		assertEquals(returnWords, wordsCount.size());
+
+		System.out.println("Printing most used words");
+		wordsCount.forEach((key, value) -> {
+			System.out.println("word [" + key + "] is used " + value + " times");
+		});
+
+		assertTrue(wordsCount.containsKey("www.gutenberg.org/contact"));
+
+	}
+
+	private void deleteRecursively(Path path) throws IOException {
+		if (Files.exists(path)) {
+			//delete recursively
+			Files.walkFileTree(path, new SimpleFileVisitor<Path>() {
+				@Override
+				public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+					Files.delete(file);
+					return FileVisitResult.CONTINUE;
+				}
+
+				@Override
+				public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+					Files.delete(dir);
+					return FileVisitResult.CONTINUE;
+				}
+			});
+		}
+		assertFalse(Files.exists(path));
+	}
 }
