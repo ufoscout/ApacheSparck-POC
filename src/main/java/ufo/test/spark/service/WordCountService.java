@@ -8,9 +8,9 @@ package ufo.test.spark.service;
 import java.io.Serializable;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.spark.api.java.JavaPairRDD;
 import org.apache.spark.api.java.JavaRDD;
@@ -60,12 +60,10 @@ public class WordCountService {
 	public static Map<String, Integer> getMostUsedWords(JavaSparkContext sc, String inputFilePath, final int wordsToReturn) {
 		JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
 
-		Map<String, Integer> result = new LinkedHashMap<>();
+		return counts.takeOrdered(wordsToReturn, new TupleComparatorStringInt())
+		.stream()
+		.collect(Collectors.toMap(tuple -> tuple._1, tuple -> tuple._2));
 
-		counts.takeOrdered(wordsToReturn, new TupleComparatorStringInt())
-				.forEach(tuple -> result.put(tuple._1, tuple._2));
-
-		return result;
 	}
 
 	/**
@@ -78,13 +76,11 @@ public class WordCountService {
 	public static Map<String, Integer> getLongestWords(JavaSparkContext sc, String inputFilePath, final int wordsToReturn) {
 		JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
 
-		Map<String, Integer> result = new LinkedHashMap<>();
+		return counts.sortByKey(new StringComparator(), false)
+				.take(wordsToReturn)
+				.stream()
+				.collect(Collectors.toMap(tuple -> tuple._1, tuple -> tuple._2));
 
-		counts.sortByKey(new StringComparator(), false)
-		.take(wordsToReturn)
-		.forEach(tuple -> result.put(tuple._1, tuple._2));
-
-		return result;
 	}
 
 	private static JavaPairRDD<String, Integer> reduce(JavaSparkContext sc, String inputFilePath) {
