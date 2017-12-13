@@ -34,7 +34,7 @@ public class WordCountService {
 	 * @return a map with all the text words and how much time they appear
 	 */
 	public static Map<String, Integer> wordsCountMap(JavaSparkContext sc, String inputFilePath) {
-		JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
+		final JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
 		return counts.collectAsMap();
 	}
 
@@ -46,7 +46,7 @@ public class WordCountService {
 	 * @return
 	 */
 	public static void wordsCountMapToFile(JavaSparkContext sc, String inputFilePath, String outputFilePath) {
-		JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
+		final JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
 		counts.saveAsTextFile(outputFilePath);
 	}
 
@@ -58,7 +58,7 @@ public class WordCountService {
 	 * @return a map with the most used words
 	 */
 	public static Map<String, Integer> getMostUsedWords(JavaSparkContext sc, String inputFilePath, final int wordsToReturn) {
-		JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
+		final JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
 
 		return counts.takeOrdered(wordsToReturn, new TupleComparatorStringInt())
 		.stream()
@@ -74,7 +74,7 @@ public class WordCountService {
 	 * @return a map with the longest words
 	 */
 	public static Map<String, Integer> getLongestWords(JavaSparkContext sc, String inputFilePath, final int wordsToReturn) {
-		JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
+		final JavaPairRDD<String, Integer> counts = reduce(sc, inputFilePath);
 
 		return counts.sortByKey(new StringComparator(), false)
 				.take(wordsToReturn)
@@ -85,11 +85,11 @@ public class WordCountService {
 
 	private static JavaPairRDD<String, Integer> reduce(JavaSparkContext sc, String inputFilePath) {
 
-		JavaRDD<String> rdd = sc.textFile(inputFilePath);
+		final JavaRDD<String> rdd = sc.textFile(inputFilePath);
 
-		return rdd.flatMap(x -> Arrays.asList(SPACE.split(x)))
-				.mapToPair(x -> new Tuple2<String, Integer>(x, 1))
-				.reduceByKey((x, y) -> x + y);
+		return rdd.flatMap(x -> Arrays.asList(SPACE.split(x)).iterator())
+					.mapToPair(x -> new Tuple2<>(x, 1))
+					.reduceByKey((x, y) -> x + y);
 
 	}
 
